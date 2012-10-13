@@ -80,6 +80,11 @@ class CmdLoadBalance(ClusterCompleter):
                           help="Allow the master to be killed when "
                           "the queue is empty (EXPERIMENTAL).")
 
+        #### ADDED EXTRA OPTION --queue_name
+        parser.add_option("-q", "--queue_name", dest="queue_name",
+                          action="store", type="str", default=None,
+                          help="Name of the queue (default: all.q)")
+
     def execute(self, args):
         if not self.cfg.globals.enable_experimental:
             raise exception.ExperimentalFeature("The loadbalance command")

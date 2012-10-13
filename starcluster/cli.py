@@ -21,6 +21,19 @@ from starcluster import optcomplete
 from starcluster.logger import log, console
 from starcluster import __version__
 
+#### CHANGED
+"""
+IMPORTED utils TO STORE CONFIG FILE FOR USE BY commands.start.addopts
+"""
+from starcluster import utils
+
+#### CHANGED
+""""
+IMPORTED logging TO RESTART LOGGER WITH SUPPLIED LOGFILE (static.DEBUG_FILE)
+"""
+import logging
+
+
 __description__ = """
 StarCluster - (http://web.mit.edu/starcluster) (v. %s)
 Software Tools for Academics and Researchers (STAR)
@@ -76,9 +89,32 @@ class StarClusterCLI(object):
             raise SystemExit("\nError: you must specify an action.")
         subcmdname, subargs = args[0], args[1:]
 
+
+        ####  CHANGED
+        """
+            CHANGE LOG FILE TO USER-SUPPLIED LOCATION IF PROVIDED
+        """
+        if gopts.LOGFILE:
+            static.DEBUG_FILE = gopts.LOGFILE
+            #### REM: THIS REMOVES starcluster.logger.ConsoleLogger HANDLER
+            while len(log.handlers) > 0:
+                log.removeHandler(log.handlers[0])
+            logger.configure_sc_logging()
+
+
         # set debug level if specified
         if gopts.DEBUG:
             console.setLevel(logger.DEBUG)
+
+
+        #### CHANGED
+        """
+            ADDED config_file TO utils FOR USE BY commands.start.addopts
+        """
+        utils.config_file = gopts.CONFIG
+
+
+
         # load StarClusterConfig into global options
         try:
             cfg = config.StarClusterConfig(gopts.CONFIG)
@@ -116,6 +152,13 @@ class StarClusterCLI(object):
                            metavar="FILE",
                            help="use alternate config file (default: %s)" % \
                            static.STARCLUSTER_CFG_FILE)
+
+        gparser.add_option("-l", "--logfile", dest="LOGFILE", action="store",
+                           metavar="FILE",
+                           help="use alternate debug log file (default: %s)" % \
+                           static.DEBUG_FILE)
+
+
         gparser.add_option("-r", "--region", dest="REGION", action="store",
                            help="specify a region to use (default: us-east-1)")
         return gparser

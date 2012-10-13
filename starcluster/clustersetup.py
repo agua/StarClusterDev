@@ -362,8 +362,13 @@ class DefaultClusterSetup(ClusterSetup):
                       '-noremote -auto ./ec2_sge.conf',
                       silent=True, only_printable=True)
         # set all.q shell to bash
-        mconn.execute('source /etc/profile && ' + \
-                      'qconf -mattr queue shell "/bin/bash" all.q')
+
+        #mconn.execute('source /etc/profile && ' + \
+        #              'qconf -mattr queue shell "/bin/bash" all.q')
+        log.info("Doing mconn.execute('qconf -mattr queue shell '/bin/bash' all.q')")
+        mconn.execute('qconf -mattr queue shell "/bin/bash" all.q')
+
+
         for node in self.nodes:
             master.ssh.execute('source /etc/profile && qconf -ah %s' %
                                node.alias)
@@ -378,10 +383,16 @@ class DefaultClusterSetup(ClusterSetup):
         parallel_environment = mconn.remote_file("/tmp/pe.txt")
         print >> parallel_environment, sge.sge_pe_template % num_processors
         parallel_environment.close()
-        mconn.execute("source /etc/profile && qconf -Ap %s" % \
-                      parallel_environment.name)
-        mconn.execute(
-            'source /etc/profile && qconf -mattr queue pe_list "orte" all.q')
+
+        #mconn.execute("source /etc/profile && qconf -Ap %s" % \
+        #              parallel_environment.name)
+        #mconn.execute(
+        #    'source /etc/profile && qconf -mattr queue pe_list "orte" all.q')
+        log.info("Doing mconn.execute('qconf -Ap s' %s parallel_environment.name)" % parallel_environment.name)
+        mconn.execute("qconf -Ap %s" % parallel_environment.name)
+        log.info("Doing mconn.execute('qconf -mattr queue pe_list 'orte' all.q')")
+        mconn.execute('qconf -mattr queue pe_list "orte" all.q')
+
 
     def run(self, nodes, master, user, user_shell, volumes):
         """Start cluster configuration"""

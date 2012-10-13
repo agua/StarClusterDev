@@ -115,6 +115,7 @@ def configure_sc_logging(use_syslog=False):
     use_syslog - enable logging all messages to syslog. currently only works if
     /dev/log exists on the system (standard for most Linux distros)
     """
+
     log.setLevel(logging.DEBUG)
     formatter = logging.Formatter(DEBUG_FORMAT_PID.rstrip())
     rfh = logging.handlers.RotatingFileHandler(static.DEBUG_FILE,
@@ -122,6 +123,7 @@ def configure_sc_logging(use_syslog=False):
                                                backupCount=2)
     rfh.setLevel(logging.DEBUG)
     rfh.setFormatter(formatter)
+
     log.addHandler(rfh)
     console.setLevel(logging.INFO)
     log.addHandler(console)

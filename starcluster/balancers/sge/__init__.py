@@ -70,6 +70,7 @@ class SGEStats(object):
             fields = self._default_fields
         self.jobs = []  # clear the old jobs
         doc = xml.dom.minidom.parseString(string)
+        
         for job in doc.getElementsByTagName("job_list"):
             jstate = job.getAttribute("state")
             hash = {"job_state": jstate}
@@ -390,10 +391,24 @@ class SGELoadBalancer(LoadBalancer):
     lookback_window = 3
     """
 
+    #def __init__(self, interval=60, max_nodes=5, wait_time=900,
+    #             add_pi=1, kill_after=45, stab=180, lookback_win=3,
+    #             min_nodes=1, allow_master_kill=False, plot_stats=False,
+    #             plot_output_dir=None, dump_stats=False, stats_file=None):
+
     def __init__(self, interval=60, max_nodes=5, wait_time=900,
                  add_pi=1, kill_after=45, stab=180, lookback_win=3,
                  min_nodes=1, allow_master_kill=False, plot_stats=False,
-                 plot_output_dir=None, dump_stats=False, stats_file=None):
+                 plot_output_dir=None, dump_stats=False, stats_file=None,
+                 queue_name=None):
+
+        self.queue_name =   queue_name
+        self.qmasterport=   os.environ['SGE_QMASTER_PORT']
+        self.execdport  =   os.environ['SGE_EXECD_PORT']    
+        self.root       =   os.environ['SGE_ROOT']
+        self.cell       =   os.environ['SGE_CELL']
+        #log.debug("balancers.sge.__init__.__init__    self.qmasterport: %s" % self.qmasterport)
+
         self._cluster = None
         self._keep_polling = True
         self._visualizer = None
@@ -490,6 +505,21 @@ class SGELoadBalancer(LoadBalancer):
         str = now.strftime("%Y%m%d%H%M")
         return str
 
+
+    def getRootPath(self, node):
+        instanceid = node.ssh.execute("curl -s http://169.254.169.254/latest/meta-data/instance-id")
+        command = 'grep ROOTPATH /etc/profile.d/sge.sh'
+        rootpath = node.ssh.execute(command)
+        log.debug("starcluster.balancer.__init__.getRootPath    rootpath: %s", rootpath)
+        entry = rootpath[0]
+        # FORMAT: ['export ROOTPATH="$ROOTPATH:$SGE_ROOT/bin/linux-x64"']
+        import re
+        match = re.search('SGE_ROOT\/([^"]+?)"', entry)
+        rootpath = match.group(1)
+        rootpath = "/opt/sge6/" + rootpath
+
+        return rootpath
+
     #@print_timing
     def get_stats(self):
         """
@@ -509,14 +539,37 @@ class SGELoadBalancer(LoadBalancer):
         try:
             now = self.get_remote_time()
             qatime = self.get_qatime(now)
-            qacct_cmd = 'source /etc/profile && qacct -j -b ' + qatime
-            qstat_cmd = 'source /etc/profile && qstat -q all.q -u \"*\" -xml'
+
+            self.qmasterport=   os.environ['SGE_QMASTER_PORT']
+            self.execdport  =   os.environ['SGE_EXECD_PORT']    
+            self.root       =   os.environ['SGE_ROOT']
+            self.cell       =   os.environ['SGE_CELL']
+            
+            p = os.popen("date")
+            log.info(p.read())
+            
+            #### SET MASTER ROOT PATH
+            rootpath = self.getRootPath(master);
+            #log.info("starcluster.balancer.__init__.get_stats    rootpath: %s", rootpath)
+            
+            envars = "export SGE_QMASTER_PORT=" + self.qmasterport + " && " \
+                + " export SGE_EXECD_PORT=" + self.execdport + " && " \
+                + " export SGE_ROOT=" + self.root + " && " \
+                + " export SGE_CELL=" + self.cell + " && "
+
+            qacct_cmd = envars + rootpath + '/qacct -j -b ' + qatime
+            qstat_cmd = envars + rootpath + '/qstat ' + \
+                        ' -u \"*\" -xml'
+            log.debug("qacct_cmd: %s" % qacct_cmd)
+            log.debug("qstat_cmd: %s" % qstat_cmd)
             qhostxml = '\n'.join(master.ssh.execute(
-                'source /etc/profile && qhost -xml', log_output=True))
+                envars + rootpath + '/qhost -xml', log_output=True))
+
             qstatxml = '\n'.join(master.ssh.execute(qstat_cmd,
                                                     log_output=True))
             qacct = '\n'.join(master.ssh.execute(qacct_cmd, log_output=True,
                                                  ignore_exit_status=True))
+        
         except Exception, e:
             log.error("Error occured getting SGE stats via ssh. "
                       "Cluster terminated?")
@@ -524,8 +577,17 @@ class SGELoadBalancer(LoadBalancer):
             return -1
         log.debug("sizes: qhost: %d, qstat: %d, qacct: %d." %
                   (len(qhostxml), len(qstatxml), len(qacct)))
+
+        log.debug("qhost: %s" % qhostxml)
+        log.debug("qstat: %s" % qstatxml)
+        log.debug("qacct: %s" % qacct)
+
         self.stat.parse_qhost(qhostxml)
-        self.stat.parse_qstat(qstatxml)
+        if ( qstatxml == None or qstatxml == '' ):
+            self.jobs = []  # clear the old jobs
+        else:
+            self.stat.parse_qstat(qstatxml)
+
         self.stat.parse_qacct(qacct, now)
 
     def run(self, cluster):

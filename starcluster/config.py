@@ -69,7 +69,13 @@ class StarClusterConfig(object):
     instance_types = static.INSTANCE_TYPES
 
     def __init__(self, config_file=None, cache=False):
+
+        import inspect;
+        #log.info("0.92.rc2    config.__init__    caller: %s, module: %s" , inspect.stack()[1][3], inspect.stack()[1][1]);
+        #log.info("0.92.rc2    config.__init__    config_file: %s", config_file)
         self.cfg_file = config_file or static.STARCLUSTER_CFG_FILE
+        #log.info("0.92.rc2    config.__init__    self.cfg_file: %s", self.cfg_file)
+
         self.type_validators = {
             int: self._get_int,
             float: self._get_float,

@@ -821,8 +821,8 @@ class Cluster(object):
         default_plugin = clustersetup.DefaultClusterSetup(self.disable_queue,
                                                           self.disable_threads)
         for node in nodes:
-            if node.is_master():
-                raise exception.InvalidOperation("cannot remove master node")
+            #if node.is_master():
+                #raise exception.InvalidOperation("cannot remove master node")
             self.run_plugins(method_name="on_remove_node",
                              node=node, reverse=True)
             default_plugin.on_remove_node(
@@ -1297,7 +1297,7 @@ class Cluster(object):
                     self.cluster_shell, self.volumes]
             if node:
                 args.insert(0, node)
-            log.info("Running plugin %s" % plugin_name)
+            log.info("\n\n\nRunning plugin %s" % plugin_name)
             func(*args)
         except NotImplementedError:
             log.debug("method %s not implemented by plugin %s" % (method_name,

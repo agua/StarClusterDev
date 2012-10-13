@@ -12,6 +12,11 @@ from starcluster.logger import log
 
 from completers import ClusterCompleter
 
+#### START
+"""
+ADD utils TO GET utils.config_file STORED BY cli.parse_subcommands
+"""
+from starcluster import utils
 
 class CmdStart(ClusterCompleter):
     """
@@ -39,7 +44,12 @@ class CmdStart(ClusterCompleter):
     tag = None
 
     def addopts(self, parser):
-        cfg = config.StarClusterConfig().load()
+
+        #### CHANGEDprint Dumper ;
+        log.info("0.92.rc2    XXXXX commands.start.addopts    utils.config_file: %s", utils.config_file)
+        #cfg = config.StarClusterConfig().load()
+        cfg = config.StarClusterConfig(utils.config_file).load()
+
         templates = cfg.get_cluster_names().keys()
         opt = parser.add_option("-c", "--cluster-template", action="store",
                                 dest="cluster_template", choices=templates,
